@@ -170,6 +170,26 @@ open class HybridUrlRequestBuilderSpec_cxx {
   }
   
   @inline(__always)
+  public final func setUploadFormData(parts: bridge.std__vector_NitroFormDataPart_) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setUploadFormData(parts: { () -> [NitroFormDataPart] in
+                    var __array = [NitroFormDataPart]()
+                    let __count = parts.size()
+                    __array.reserveCapacity(Int(__count))
+                    for __i in 0..<__count {
+                      let __item = bridge.get_std__vector_NitroFormDataPart_(parts, __i)
+                      __array.append(__item)
+                    }
+                    return __array
+                  }())
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func disableCache() -> bridge.Result_void_ {
     do {
       try self.__implementation.disableCache()

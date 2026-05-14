@@ -9,6 +9,8 @@
 
 // Forward declaration of `HybridUrlRequestSpec` to properly resolve imports.
 namespace margelo::nitro::nitrofetch { class HybridUrlRequestSpec; }
+// Forward declaration of `NitroFormDataPart` to properly resolve imports.
+namespace margelo::nitro::nitrofetch { struct NitroFormDataPart; }
 // Forward declaration of `UrlResponseInfo` to properly resolve imports.
 namespace margelo::nitro::nitrofetch { struct UrlResponseInfo; }
 // Forward declaration of `HttpHeader` to properly resolve imports.
@@ -24,6 +26,10 @@ namespace margelo::nitro::nitrofetch { struct RequestException; }
 #include <variant>
 #include "JVariant_ArrayBuffer_String.hpp"
 #include <NitroModules/JArrayBuffer.hpp>
+#include "NitroFormDataPart.hpp"
+#include <vector>
+#include "JNitroFormDataPart.hpp"
+#include <optional>
 #include "UrlResponseInfo.hpp"
 #include <functional>
 #include "JFunc_void_UrlResponseInfo.hpp"
@@ -31,9 +37,7 @@ namespace margelo::nitro::nitrofetch { struct RequestException; }
 #include "JUrlResponseInfo.hpp"
 #include <unordered_map>
 #include "HttpHeader.hpp"
-#include <vector>
 #include "JHttpHeader.hpp"
-#include <optional>
 #include "RequestException.hpp"
 #include "JFunc_void_std__optional_UrlResponseInfo__RequestException.hpp"
 #include "JRequestException.hpp"
@@ -85,6 +89,19 @@ namespace margelo::nitro::nitrofetch {
   void JHybridUrlRequestBuilderSpec::setUploadBody(const std::variant<std::shared_ptr<ArrayBuffer>, std::string>& body) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JVariant_ArrayBuffer_String> /* body */)>("setUploadBody");
     method(_javaPart, JVariant_ArrayBuffer_String::fromCpp(body));
+  }
+  void JHybridUrlRequestBuilderSpec::setUploadFormData(const std::vector<NitroFormDataPart>& parts) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JNitroFormDataPart>> /* parts */)>("setUploadFormData");
+    method(_javaPart, [&]() {
+      size_t __size = parts.size();
+      jni::local_ref<jni::JArrayClass<JNitroFormDataPart>> __array = jni::JArrayClass<JNitroFormDataPart>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = parts[__i];
+        auto __elementJni = JNitroFormDataPart::fromCpp(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }());
   }
   void JHybridUrlRequestBuilderSpec::disableCache() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("disableCache");

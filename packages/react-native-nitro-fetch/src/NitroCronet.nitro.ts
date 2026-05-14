@@ -1,4 +1,5 @@
 import type { HybridObject } from 'react-native-nitro-modules';
+import type { NitroFormDataPart } from './NitroFetch.nitro';
 
 export interface HttpHeader {
   key: string;
@@ -40,6 +41,7 @@ export interface UrlRequestBuilder extends HybridObject<{
   setHttpMethod(httpMethod: string): void;
   addHeader(name: string, value: string): void;
   setUploadBody(body: ArrayBuffer | string): void;
+  setUploadFormData(parts: NitroFormDataPart[]): void;
   disableCache(): void;
   onSucceeded(callback: (info: UrlResponseInfo) => void): void;
   onFailed(

@@ -170,6 +170,18 @@ class NitroUrlRequestBuilder(
         body.value.toByteArray(Charsets.UTF_8)
       }
     }
+    setUploadBytes(bodyBytes)
+  }
+
+  override fun setUploadFormData(parts: Array<NitroFormDataPart>) {
+    val (body, contentType) = MultipartBodyBuilder.build(parts)
+    val contentTypeHeader = "Content-Type"
+    requestHeaders[contentTypeHeader] = contentType
+    builder.addHeader(contentTypeHeader, contentType)
+    setUploadBytes(body)
+  }
+
+  private fun setUploadBytes(bodyBytes: ByteArray) {
     uploadBodyLength = bodyBytes.size.toLong()
 
     val provider = object : org.chromium.net.UploadDataProvider() {

@@ -4,7 +4,8 @@
 
 - Drop-in replacement for the global `fetch`.
 - Accepts `Headers`, array pairs, or plain object for `init.headers`.
-- Body supports: `string`, `URLSearchParams`, `ArrayBuffer`, and typed arrays.
+- Body supports: `string`, `URLSearchParams`, `ArrayBuffer`, typed arrays, and `FormData` (multipart with `Content-Type` and boundary set automatically; file parts accept `file://`, `content://` on Android, and `http(s)://` URIs).
+- Pass `stream: true` in `init` to receive a streamed `Response.body` (a `ReadableStream<Uint8Array>`). The streaming path accepts the same body types as above.
 - Returns a `Response` when available; otherwise a minimal object with `arrayBuffer()`, `text()`, `json()`, and `headers`.
 
 Example

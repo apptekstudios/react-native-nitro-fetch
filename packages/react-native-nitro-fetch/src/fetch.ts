@@ -559,8 +559,33 @@ async function nitroStreamFetch(
 
   const body = init?.body;
   if (body != null) {
-    if (typeof body === 'string') builder.setUploadBody(body);
-    else if (body instanceof ArrayBuffer) builder.setUploadBody(body);
+    if (typeof body === 'string') {
+      builder.setUploadBody(body);
+    } else if (isFormData(body)) {
+      // Native sets Content-Type with the boundary.
+      builder.setUploadFormData(serializeFormData(body as FormData));
+    } else if (body instanceof URLSearchParams) {
+      const hasContentType = headers?.some(
+        (h) => h.key.toLowerCase() === 'content-type'
+      );
+      if (!hasContentType) {
+        builder.addHeader(
+          'Content-Type',
+          'application/x-www-form-urlencoded;charset=UTF-8'
+        );
+      }
+      builder.setUploadBody(body.toString());
+    } else if (body instanceof ArrayBuffer) {
+      builder.setUploadBody(body);
+    } else if (ArrayBuffer.isView(body)) {
+      const view = body as ArrayBufferView;
+      builder.setUploadBody(
+        view.buffer.slice(
+          view.byteOffset,
+          view.byteOffset + view.byteLength
+        ) as ArrayBuffer
+      );
+    }
   }
 
   return new Promise((resolveResponse, rejectResponse) => {

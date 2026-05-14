@@ -83,6 +83,12 @@ class HybridUrlRequestBuilder: HybridUrlRequestBuilderSpec {
     }
   }
 
+  func setUploadFormData(parts: [NitroFormDataPart]) throws {
+    let (body, contentType) = try MultipartBodyBuilder.build(parts: parts)
+    self.urlRequest.httpBody = body
+    self.urlRequest.setValue(contentType, forHTTPHeaderField: "Content-Type")
+  }
+
   func disableCache() throws {
     self.urlRequest.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
   }
