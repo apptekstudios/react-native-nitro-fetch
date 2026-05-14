@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "react-native-nitro-fetch-monorepo",
@@ -71,7 +72,7 @@
     },
     "packages/react-native-nitro-fetch": {
       "name": "react-native-nitro-fetch",
-      "version": "1.1.1",
+      "version": "1.2.1",
       "dependencies": {
         "web-streams-polyfill": "^4.2.0",
       },

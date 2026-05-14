@@ -43,6 +43,10 @@ abstract class HybridUrlRequestBuilderSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun setUploadFormData(parts: Array<NitroFormDataPart>): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun disableCache(): Unit
   
   abstract fun onSucceeded(callback: (info: UrlResponseInfo) -> Unit): Unit

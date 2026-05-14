@@ -16,6 +16,7 @@ public protocol HybridUrlRequestBuilderSpec_protocol: HybridObject {
   func setHttpMethod(httpMethod: String) throws -> Void
   func addHeader(name: String, value: String) throws -> Void
   func setUploadBody(body: Variant_ArrayBuffer_String) throws -> Void
+  func setUploadFormData(parts: [NitroFormDataPart]) throws -> Void
   func disableCache() throws -> Void
   func onSucceeded(callback: @escaping (_ info: UrlResponseInfo) -> Void) throws -> Void
   func onFailed(callback: @escaping (_ info: UrlResponseInfo?, _ error: RequestException) -> Void) throws -> Void

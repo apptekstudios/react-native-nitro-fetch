@@ -134,6 +134,108 @@ export function StreamingScreen() {
           append(`\n✅ Done — ${chunks} chunks, ${total} bytes total`);
         }),
     },
+    {
+      id: 'stream-formdata',
+      title: 'Streaming POST with FormData',
+      description: 'Multipart upload to httpbin /post with streamed response',
+      action: () =>
+        runTest('stream-formdata', async () => {
+          const form = new FormData();
+          form.append('greeting', 'hello from nitro-fetch');
+          form.append('count', '42');
+          form.append('document', {
+            uri: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+            type: 'application/pdf',
+            name: 'test_document.pdf',
+          } as any);
+          const res = await (nitroFetch as any)('https://httpbin.org/post', {
+            method: 'POST',
+            stream: true,
+            body: form,
+            signal: abortRef.current?.signal,
+          });
+          append(`Status: ${res.status}\n\n`);
+          const reader = res.body?.getReader();
+          if (!reader) {
+            append('No readable stream!');
+            return;
+          }
+          let total = 0;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            total += value?.byteLength ?? 0;
+            const text = decoder.current.decode(value, { stream: true });
+            append(text);
+          }
+          append(`\n\n✅ Done — ${total} bytes total`);
+        }),
+    },
+    {
+      id: 'stream-urlsearchparams',
+      title: 'Streaming POST with URLSearchParams',
+      description:
+        'httpbin /post — Content-Type set to application/x-www-form-urlencoded',
+      action: () =>
+        runTest('stream-urlsearchparams', async () => {
+          const params = new URLSearchParams();
+          params.append('greeting', 'hello from nitro-fetch');
+          params.append('count', '42');
+          const res = await (nitroFetch as any)('https://httpbin.org/post', {
+            method: 'POST',
+            stream: true,
+            body: params,
+            signal: abortRef.current?.signal,
+          });
+          append(`Status: ${res.status}\n\n`);
+          const reader = res.body?.getReader();
+          if (!reader) {
+            append('No readable stream!');
+            return;
+          }
+          let total = 0;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            total += value?.byteLength ?? 0;
+            const text = decoder.current.decode(value, { stream: true });
+            append(text);
+          }
+          append(`\n\n✅ Done — ${total} bytes total`);
+        }),
+    },
+    {
+      id: 'stream-uint8array',
+      title: 'Streaming POST with Uint8Array',
+      description: 'httpbin /post — raw byte body round-trip',
+      action: () =>
+        runTest('stream-uint8array', async () => {
+          const payload = new Uint8Array(256);
+          for (let i = 0; i < payload.length; i++) payload[i] = i;
+          const res = await (nitroFetch as any)('https://httpbin.org/post', {
+            method: 'POST',
+            stream: true,
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: payload,
+            signal: abortRef.current?.signal,
+          });
+          append(`Status: ${res.status}\nSent ${payload.byteLength} bytes\n\n`);
+          const reader = res.body?.getReader();
+          if (!reader) {
+            append('No readable stream!');
+            return;
+          }
+          let total = 0;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            total += value?.byteLength ?? 0;
+            const text = decoder.current.decode(value, { stream: true });
+            append(text);
+          }
+          append(`\n\n✅ Done — ${total} bytes total`);
+        }),
+    },
   ];
 
   return (

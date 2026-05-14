@@ -14,6 +14,8 @@ namespace NitroFetch { class HybridUrlRequestBuilderSpec_cxx; }
 
 // Forward declaration of `ArrayBufferHolder` to properly resolve imports.
 namespace NitroModules { class ArrayBufferHolder; }
+// Forward declaration of `NitroFormDataPart` to properly resolve imports.
+namespace margelo::nitro::nitrofetch { struct NitroFormDataPart; }
 // Forward declaration of `UrlResponseInfo` to properly resolve imports.
 namespace margelo::nitro::nitrofetch { struct UrlResponseInfo; }
 // Forward declaration of `HttpHeader` to properly resolve imports.
@@ -27,12 +29,13 @@ namespace margelo::nitro::nitrofetch { class HybridUrlRequestSpec; }
 #include <NitroModules/ArrayBuffer.hpp>
 #include <variant>
 #include <NitroModules/ArrayBufferHolder.hpp>
+#include "NitroFormDataPart.hpp"
+#include <vector>
+#include <optional>
 #include "UrlResponseInfo.hpp"
 #include <functional>
 #include <unordered_map>
 #include "HttpHeader.hpp"
-#include <vector>
-#include <optional>
 #include "RequestException.hpp"
 #include <memory>
 #include "HybridUrlRequestSpec.hpp"
@@ -101,6 +104,12 @@ namespace margelo::nitro::nitrofetch {
     }
     inline void setUploadBody(const std::variant<std::shared_ptr<ArrayBuffer>, std::string>& body) override {
       auto __result = _swiftPart.setUploadBody(body);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setUploadFormData(const std::vector<NitroFormDataPart>& parts) override {
+      auto __result = _swiftPart.setUploadFormData(parts);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

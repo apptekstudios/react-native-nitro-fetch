@@ -144,6 +144,35 @@ namespace margelo::nitro::nitrofetch::bridge::swift {
     return std__variant_std__shared_ptr_ArrayBuffer___std__string_(value);
   }
   
+  // pragma MARK: std::optional<std::string>
+  /**
+   * Specialized version of `std::optional<std::string>`.
+   */
+  using std__optional_std__string_ = std::optional<std::string>;
+  inline std::optional<std::string> create_std__optional_std__string_(const std::string& value) noexcept {
+    return std::optional<std::string>(value);
+  }
+  inline bool has_value_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::vector<NitroFormDataPart>
+  /**
+   * Specialized version of `std::vector<NitroFormDataPart>`.
+   */
+  using std__vector_NitroFormDataPart_ = std::vector<NitroFormDataPart>;
+  inline std::vector<NitroFormDataPart> create_std__vector_NitroFormDataPart_(size_t size) noexcept {
+    std::vector<NitroFormDataPart> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  inline NitroFormDataPart get_std__vector_NitroFormDataPart_(const std::vector<NitroFormDataPart>& vector, size_t index) noexcept {
+    return vector[index];
+  }
+  
   // pragma MARK: std::unordered_map<std::string, std::string>
   /**
    * Specialized version of `std::unordered_map<std::string, std::string>`.
@@ -378,21 +407,6 @@ namespace margelo::nitro::nitrofetch::bridge::swift {
     return vector[index];
   }
   
-  // pragma MARK: std::optional<std::string>
-  /**
-   * Specialized version of `std::optional<std::string>`.
-   */
-  using std__optional_std__string_ = std::optional<std::string>;
-  inline std::optional<std::string> create_std__optional_std__string_(const std::string& value) noexcept {
-    return std::optional<std::string>(value);
-  }
-  inline bool has_value_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
-    return optional.value();
-  }
-  
   // pragma MARK: std::shared_ptr<Promise<NitroResponse>>
   /**
    * Specialized version of `std::shared_ptr<Promise<NitroResponse>>`.
@@ -477,20 +491,6 @@ namespace margelo::nitro::nitrofetch::bridge::swift {
   }
   inline std::vector<NitroHeader> get_std__optional_std__vector_NitroHeader__(const std::optional<std::vector<NitroHeader>>& optional) noexcept {
     return optional.value();
-  }
-  
-  // pragma MARK: std::vector<NitroFormDataPart>
-  /**
-   * Specialized version of `std::vector<NitroFormDataPart>`.
-   */
-  using std__vector_NitroFormDataPart_ = std::vector<NitroFormDataPart>;
-  inline std::vector<NitroFormDataPart> create_std__vector_NitroFormDataPart_(size_t size) noexcept {
-    std::vector<NitroFormDataPart> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  inline NitroFormDataPart get_std__vector_NitroFormDataPart_(const std::vector<NitroFormDataPart>& vector, size_t index) noexcept {
-    return vector[index];
   }
   
   // pragma MARK: std::optional<std::vector<NitroFormDataPart>>
