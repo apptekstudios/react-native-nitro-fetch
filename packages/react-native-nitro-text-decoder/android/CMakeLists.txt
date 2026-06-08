@@ -11,7 +11,20 @@ add_library(${PACKAGE_NAME} SHARED
         ../cpp/HybridTextEncoding.cpp
         ../cpp/HybridTextDecoder.cpp
         ../cpp/TextDecoderUtils.cpp
+        ../cpp/simdutf.cpp
 )
+
+# Drop simdutf's base64 support — the decoder only uses UTF transcoding
+# (~20-30 KB saved on stripped binary).
+target_compile_definitions(${PACKAGE_NAME} PRIVATE
+        SIMDUTF_FEATURE_BASE64=0
+)
+
+# simdutf is tuned for -O3; ThinLTO lets the JSI binding inline into
+# the simdutf entry points. NDK Release defaults to -O2, which leaves
+# perf on the table.
+target_compile_options(${PACKAGE_NAME} PRIVATE -O3 -flto=thin)
+target_link_options(${PACKAGE_NAME} PRIVATE -flto=thin)
 
 # Add Nitrogen specs :)
 include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroTextDecoder+autolinking.cmake)

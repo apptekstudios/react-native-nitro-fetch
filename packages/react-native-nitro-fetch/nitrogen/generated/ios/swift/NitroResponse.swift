@@ -18,7 +18,7 @@ public extension NitroResponse {
   /**
    * Create a new instance of `NitroResponse`.
    */
-  init(url: String, status: Double, statusText: String, ok: Bool, redirected: Bool, headers: [NitroHeader], bodyString: String?, bodyBytes: String?) {
+  init(url: String, status: Double, statusText: String, ok: Bool, redirected: Bool, headers: [NitroHeader], bodyString: String?, bodyBytes: ArrayBuffer?) {
     self.init(std.string(url), status, std.string(statusText), ok, redirected, { () -> bridge.std__vector_NitroHeader_ in
       var __vector = bridge.create_std__vector_NitroHeader_(headers.count)
       for __item in headers {
@@ -31,9 +31,9 @@ public extension NitroResponse {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__string_ in
+    }(), { () -> bridge.std__optional_std__shared_ptr_ArrayBuffer__ in
       if let __unwrappedValue = bodyBytes {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        return bridge.create_std__optional_std__shared_ptr_ArrayBuffer__(__unwrappedValue.getArrayBuffer())
       } else {
         return .init()
       }
@@ -92,11 +92,11 @@ public extension NitroResponse {
   }
   
   @inline(__always)
-  var bodyBytes: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__bodyBytes) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__bodyBytes)
-        return String(__unwrapped)
+  var bodyBytes: ArrayBuffer? {
+    return { () -> ArrayBuffer? in
+      if bridge.has_value_std__optional_std__shared_ptr_ArrayBuffer__(self.__bodyBytes) {
+        let __unwrapped = bridge.get_std__optional_std__shared_ptr_ArrayBuffer__(self.__bodyBytes)
+        return ArrayBuffer(__unwrapped)
       } else {
         return nil
       }

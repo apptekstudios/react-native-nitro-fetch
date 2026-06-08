@@ -5,8 +5,7 @@ import {
   Response,
   Request,
 } from 'react-native-nitro-fetch';
-
-const BASE = 'https://httpbin.org';
+import { BASE } from '../test-utils/server';
 
 describe('Headers - Construction', () => {
   it('constructs from plain object', () => {
@@ -652,5 +651,60 @@ describe('Fetch - Blob request body', () => {
     const body = await res.json();
     const parsed = JSON.parse(body.data);
     expect(parsed.blob).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Binary response bodies — arrayBuffer() / bytes() must return raw bytes
+// (regression test for empty/corrupted binary bodies on iOS/Android)
+// ---------------------------------------------------------------------------
+describe('Response - binary body', () => {
+  // PNG files always start with this 8-byte signature.
+  const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+  it('arrayBuffer() returns the raw bytes of a binary response', async () => {
+    const res = await nitroFetch(`${BASE}/image/png`);
+    const buf = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    expect(bytes.length).toBeGreaterThan(8);
+    for (let i = 0; i < PNG_SIGNATURE.length; i++) {
+      expect(bytes[i]).toBe(PNG_SIGNATURE[i]);
+    }
+  });
+
+  it('bytes() returns the raw bytes of a binary response', async () => {
+    const res = await nitroFetch(`${BASE}/image/png`);
+    const bytes = await res.bytes();
+    expect(bytes instanceof Uint8Array).toBe(true);
+    expect(bytes.length).toBeGreaterThan(8);
+    for (let i = 0; i < PNG_SIGNATURE.length; i++) {
+      expect(bytes[i]).toBe(PNG_SIGNATURE[i]);
+    }
+  });
+
+  it('arrayBuffer() returns the exact byte count for octet-stream', async () => {
+    const res = await nitroFetch(`${BASE}/bytes/256`);
+    const buf = await res.arrayBuffer();
+    expect(buf.byteLength).toBe(256);
+  });
+
+  it('arrayBuffer() and bytes() agree on the same binary response', async () => {
+    const res1 = await nitroFetch(`${BASE}/bytes/128`);
+    const res2 = await nitroFetch(`${BASE}/bytes/128`);
+    const fromArrayBuffer = new Uint8Array(await res1.arrayBuffer());
+    const fromBytes = await res2.bytes();
+    expect(fromArrayBuffer.length).toBe(128);
+    expect(fromBytes.length).toBe(128);
+  });
+
+  it('clone() preserves a binary body', async () => {
+    const res = await nitroFetch(`${BASE}/image/png`);
+    const cloned = res.clone();
+    const a = new Uint8Array(await res.arrayBuffer());
+    const b = new Uint8Array(await cloned.arrayBuffer());
+    expect(a.length).toBe(b.length);
+    for (let i = 0; i < PNG_SIGNATURE.length; i++) {
+      expect(b[i]).toBe(PNG_SIGNATURE[i]);
+    }
   });
 });

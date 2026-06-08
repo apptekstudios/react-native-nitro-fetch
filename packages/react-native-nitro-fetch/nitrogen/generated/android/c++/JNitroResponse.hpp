@@ -12,6 +12,8 @@
 
 #include "JNitroHeader.hpp"
 #include "NitroHeader.hpp"
+#include <NitroModules/ArrayBuffer.hpp>
+#include <NitroModules/JArrayBuffer.hpp>
 #include <optional>
 #include <string>
 #include <vector>
@@ -49,8 +51,8 @@ namespace margelo::nitro::nitrofetch {
       jni::local_ref<jni::JArrayClass<JNitroHeader>> headers = this->getFieldValue(fieldHeaders);
       static const auto fieldBodyString = clazz->getField<jni::JString>("bodyString");
       jni::local_ref<jni::JString> bodyString = this->getFieldValue(fieldBodyString);
-      static const auto fieldBodyBytes = clazz->getField<jni::JString>("bodyBytes");
-      jni::local_ref<jni::JString> bodyBytes = this->getFieldValue(fieldBodyBytes);
+      static const auto fieldBodyBytes = clazz->getField<JArrayBuffer::javaobject>("bodyBytes");
+      jni::local_ref<JArrayBuffer::javaobject> bodyBytes = this->getFieldValue(fieldBodyBytes);
       return NitroResponse(
         url->toStdString(),
         status,
@@ -68,7 +70,7 @@ namespace margelo::nitro::nitrofetch {
           return __vector;
         }(),
         bodyString != nullptr ? std::make_optional(bodyString->toStdString()) : std::nullopt,
-        bodyBytes != nullptr ? std::make_optional(bodyBytes->toStdString()) : std::nullopt
+        bodyBytes != nullptr ? std::make_optional(bodyBytes->cthis()->getArrayBuffer()) : std::nullopt
       );
     }
 
@@ -78,7 +80,7 @@ namespace margelo::nitro::nitrofetch {
      */
     [[maybe_unused]]
     static jni::local_ref<JNitroResponse::javaobject> fromCpp(const NitroResponse& value) {
-      using JSignature = JNitroResponse(jni::alias_ref<jni::JString>, double, jni::alias_ref<jni::JString>, jboolean, jboolean, jni::alias_ref<jni::JArrayClass<JNitroHeader>>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JNitroResponse(jni::alias_ref<jni::JString>, double, jni::alias_ref<jni::JString>, jboolean, jboolean, jni::alias_ref<jni::JArrayClass<JNitroHeader>>, jni::alias_ref<jni::JString>, jni::alias_ref<JArrayBuffer::javaobject>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -99,7 +101,7 @@ namespace margelo::nitro::nitrofetch {
           return __array;
         }(),
         value.bodyString.has_value() ? jni::make_jstring(value.bodyString.value()) : nullptr,
-        value.bodyBytes.has_value() ? jni::make_jstring(value.bodyBytes.value()) : nullptr
+        value.bodyBytes.has_value() ? JArrayBuffer::wrap(value.bodyBytes.value()) : nullptr
       );
     }
   };
