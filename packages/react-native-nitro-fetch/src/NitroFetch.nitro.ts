@@ -36,6 +36,9 @@ export interface NitroRequest {
   // Controls
   timeoutMs?: number;
   followRedirects?: boolean; // default true
+  // Max age (ms) a prefetch cache entry is considered fresh at read time.
+  // Default 5000 when omitted. <= 0 disables cache hits.
+  prefetchCacheTtlMs?: number;
   // Optional ID used for cancellation via cancelRequest()
   requestId?: string;
 }
@@ -47,9 +50,8 @@ export interface NitroResponse {
   ok: boolean;
   redirected: boolean;
   headers: NitroHeader[];
-  // Body as either UTF-8 string or raw bytes (first implementation target)
   bodyString?: string;
-  bodyBytes?: string; //will be ArrayBuffer in future
+  bodyBytes?: ArrayBuffer;
 }
 
 export interface NitroFetchClient extends HybridObject<{

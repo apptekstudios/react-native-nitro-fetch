@@ -3,24 +3,28 @@ import {
   fetch as nitroFetch,
   nitroFetchOnWorklet,
   prefetch,
+  prefetchOnAppStart,
   removeFromAutoPrefetch,
+  __readAutoPrefetchQueue,
 } from 'react-native-nitro-fetch';
 import { getRuntimeKind, RuntimeKind } from 'react-native-worklets';
+import { BASE } from '../test-utils/server';
 
-const image = 'https://httpbin.org/image/jpeg';
-
-const BASE = 'https://httpbin.org';
+const image = `${BASE}/image/jpeg`;
 
 describe('NitroFetch - Native registerPrefetch', () => {
-  const NP_URL = 'https://httpbin.org/anything/native-prefetch-test';
+  const NP_URL = `${BASE}/anything/native-prefetch-test`;
   const NP_KEY = 'harness-native-prefetch';
 
   it('serves a cache hit on the first JS fetch (first-run prefetching)', async () => {
+    // The native registration in AppDelegate / MainApplication uses a long
+    // prefetchCacheTtlMs (300s) so the cache survives well past app launch;
+    // pass the same TTL here so the cache-hit lookup uses the matching window.
     const res = await nitroFetch(NP_URL, {
       headers: { prefetchKey: NP_KEY },
-    });
+      prefetchCacheTtlMs: 300_000,
+    } as any);
     expect(res.ok).toBe(true);
-    // Native code stamps "nitroPrefetched: true" on cache-served responses.
     expect(res.headers.get('nitroPrefetched')).toBe('true');
   });
 
@@ -31,12 +35,61 @@ describe('NitroFetch - Native registerPrefetch', () => {
   });
 });
 
+describe('NitroFetch - Prefetch cache TTL', () => {
+  it('custom TTL keeps the prefetch fresh past the 5s default', async () => {
+    // Unique per-run key + URL so we never collide with a previous app session.
+    const STAMP = String(Date.now());
+    const KEY = 'ttl-long-' + STAMP;
+    const URL = `${BASE}/anything/ttl-test-${STAMP}`;
+    await prefetch(URL, {
+      headers: { prefetchKey: KEY },
+      prefetchCacheTtlMs: 60_000,
+    } as any);
+    // Wait past the default 5s window (giving the prefetch ample time to land).
+    // 8s exceeds the 5s default; the 60s TTL keeps the entry fresh.
+    await new Promise((r) => setTimeout(r, 8_000));
+    const res = await nitroFetch(URL, {
+      headers: { prefetchKey: KEY },
+      prefetchCacheTtlMs: 60_000,
+    } as any);
+    expect(res.ok).toBe(true);
+    expect(res.headers.get('nitroPrefetched')).toBe('true');
+  });
+
+  it('prefetchOnAppStart persists prefetchCacheTtlMs into the queue', async () => {
+    const KEY = 'pf-ttl-persisted';
+    await prefetchOnAppStart(`${BASE}/get`, {
+      prefetchKey: KEY,
+      prefetchCacheTtlMs: 12_345,
+    } as any);
+    const entry = __readAutoPrefetchQueue().find(
+      (e: any) => e?.prefetchKey === KEY
+    );
+    expect(entry).toBeDefined();
+    expect(entry!.prefetchCacheTtlMs).toBe(12_345);
+    await removeFromAutoPrefetch(KEY);
+  });
+
+  it('omitting prefetchCacheTtlMs leaves the queue entry without the field', async () => {
+    const KEY = 'pf-ttl-omitted';
+    await prefetchOnAppStart(`${BASE}/get`, {
+      prefetchKey: KEY,
+    } as any);
+    const entry = __readAutoPrefetchQueue().find(
+      (e: any) => e?.prefetchKey === KEY
+    );
+    expect(entry).toBeDefined();
+    expect(entry!.prefetchCacheTtlMs).toBeUndefined();
+    await removeFromAutoPrefetch(KEY);
+  });
+});
+
 describe('NitroFetch - Basic GET', () => {
   it('returns status 200 and ok=true for successful GET', async () => {
     const res = await nitroFetch(`${BASE}/get`);
     expect(res.status).toBe(200);
     expect(res.ok).toBe(true);
-    expect(res.url).toContain('httpbin');
+    expect(res.url).toContain('/get');
   });
 
   it('text() returns a non-empty string', async () => {
@@ -165,7 +218,7 @@ describe('NitroFetch - Request Body Types', () => {
 });
 
 describe('NitroFetch - Response Headers', () => {
-  it('custom request header echoed by httpbin', async () => {
+  it('custom request header echoed by the server', async () => {
     const res = await nitroFetch(`${BASE}/headers`, {
       headers: { 'X-Test-Header': 'nitro' },
     });
@@ -212,6 +265,102 @@ describe('NitroFetch - Redirects', () => {
     const res = await nitroFetch(`${BASE}/redirect/1`);
     expect(res.redirected).toBe(true);
     expect(res.status).toBe(200);
+  });
+});
+
+describe('NitroFetch - prefetchOnAppStart persists method + body', () => {
+  const findEntry = (key: string) =>
+    __readAutoPrefetchQueue().find((e: any) => e?.prefetchKey === key);
+
+  it('POST + string body round-trips through the queue', async () => {
+    const KEY = 'pf-post-string';
+    await prefetchOnAppStart(`${BASE}/post`, {
+      method: 'POST',
+      body: 'hello',
+      prefetchKey: KEY,
+    } as any);
+    const entry = findEntry(KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.method).toBe('POST');
+    expect(entry!.bodyString).toBe('hello');
+    expect(entry!.bodyFormData).toBeUndefined();
+    await removeFromAutoPrefetch(KEY);
+  });
+
+  it('POST + JSON body round-trips through the queue with Content-Type', async () => {
+    const KEY = 'pf-post-json';
+    const payload = { user: 'alice', count: 42 };
+    await prefetchOnAppStart(`${BASE}/post`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+        'prefetchKey': KEY,
+      },
+    });
+    const entry = findEntry(KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.method).toBe('POST');
+    expect(entry!.bodyString).toBe(JSON.stringify(payload));
+    const ct = Object.entries(entry!.headers as Record<string, string>).find(
+      ([k]) => k.toLowerCase() === 'content-type'
+    );
+    expect(ct).toBeDefined();
+    expect(ct![1]).toBe('application/json');
+    await removeFromAutoPrefetch(KEY);
+  });
+
+  it('POST + FormData round-trips through the queue', async () => {
+    const KEY = 'pf-post-fd';
+    const fd = new FormData();
+    fd.append('user', 'alice');
+    fd.append('msg', 'hi');
+    await prefetchOnAppStart(`${BASE}/post`, {
+      method: 'POST',
+      body: fd,
+      prefetchKey: KEY,
+    } as any);
+    const entry = findEntry(KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.method).toBe('POST');
+    expect(Array.isArray(entry!.bodyFormData)).toBe(true);
+    expect(entry!.bodyFormData.length).toBe(2);
+    const userPart = entry!.bodyFormData.find((p: any) => p.name === 'user');
+    expect(userPart).toBeDefined();
+    expect(userPart.value).toBe('alice');
+    await removeFromAutoPrefetch(KEY);
+  });
+
+  it('GET (default) omits method/body from entry', async () => {
+    const KEY = 'pf-get-default';
+    await prefetchOnAppStart(`${BASE}/get`, { prefetchKey: KEY });
+    const entry = findEntry(KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.method).toBeUndefined();
+    expect(entry!.bodyString).toBeUndefined();
+    expect(entry!.bodyFormData).toBeUndefined();
+    await removeFromAutoPrefetch(KEY);
+  });
+
+  it('redirect=error persists followRedirects=false', async () => {
+    const KEY = 'pf-noredir';
+    await prefetchOnAppStart(`${BASE}/get`, {
+      prefetchKey: KEY,
+      redirect: 'error',
+    } as any);
+    const entry = findEntry(KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.followRedirects).toBe(false);
+    await removeFromAutoPrefetch(KEY);
+  });
+
+  it('redirect=follow (default) omits followRedirects', async () => {
+    const KEY = 'pf-yesredir';
+    await prefetchOnAppStart(`${BASE}/get`, { prefetchKey: KEY });
+    const entry = findEntry(KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.followRedirects).toBeUndefined();
+    await removeFromAutoPrefetch(KEY);
   });
 });
 
@@ -323,6 +472,19 @@ describe('NitroFetch - nitroFetchOnWorklet', () => {
     expect((result as any)[0].id).toBe('bitcoin');
     expect((result as any)[0].usd).toBeGreaterThan(0);
     expect(runtimeKind).toBe(RuntimeKind.Worker); // Worker Runtime only
+  });
+});
+
+// Real-world HTTPS smoke test against a public API. The bulk of the suite runs
+// against the local Express server (test-server/), so this keeps coverage of an
+// actual TLS handshake + cert validation on the device's native stack.
+describe('NitroFetch - real HTTPS (PokeAPI)', () => {
+  it('GET https://pokeapi.co returns ditto over TLS', async () => {
+    const res = await nitroFetch('https://pokeapi.co/api/v2/pokemon/ditto');
+    expect(res.ok).toBe(true);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.name).toBe('ditto');
   });
 });
 

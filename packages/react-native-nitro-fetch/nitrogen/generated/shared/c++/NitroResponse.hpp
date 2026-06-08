@@ -35,6 +35,7 @@ namespace margelo::nitro::nitrofetch { struct NitroHeader; }
 #include "NitroHeader.hpp"
 #include <vector>
 #include <optional>
+#include <NitroModules/ArrayBuffer.hpp>
 
 namespace margelo::nitro::nitrofetch {
 
@@ -50,11 +51,11 @@ namespace margelo::nitro::nitrofetch {
     bool redirected     SWIFT_PRIVATE;
     std::vector<NitroHeader> headers     SWIFT_PRIVATE;
     std::optional<std::string> bodyString     SWIFT_PRIVATE;
-    std::optional<std::string> bodyBytes     SWIFT_PRIVATE;
+    std::optional<std::shared_ptr<ArrayBuffer>> bodyBytes     SWIFT_PRIVATE;
 
   public:
     NitroResponse() = default;
-    explicit NitroResponse(std::string url, double status, std::string statusText, bool ok, bool redirected, std::vector<NitroHeader> headers, std::optional<std::string> bodyString, std::optional<std::string> bodyBytes): url(url), status(status), statusText(statusText), ok(ok), redirected(redirected), headers(headers), bodyString(bodyString), bodyBytes(bodyBytes) {}
+    explicit NitroResponse(std::string url, double status, std::string statusText, bool ok, bool redirected, std::vector<NitroHeader> headers, std::optional<std::string> bodyString, std::optional<std::shared_ptr<ArrayBuffer>> bodyBytes): url(url), status(status), statusText(statusText), ok(ok), redirected(redirected), headers(headers), bodyString(bodyString), bodyBytes(bodyBytes) {}
 
   public:
     friend bool operator==(const NitroResponse& lhs, const NitroResponse& rhs) = default;
@@ -77,7 +78,7 @@ namespace margelo::nitro {
         JSIConverter<bool>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "redirected"))),
         JSIConverter<std::vector<margelo::nitro::nitrofetch::NitroHeader>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "headers"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyString"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyBytes")))
+        JSIConverter<std::optional<std::shared_ptr<ArrayBuffer>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyBytes")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::nitrofetch::NitroResponse& arg) {
@@ -89,7 +90,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "redirected"), JSIConverter<bool>::toJSI(runtime, arg.redirected));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "headers"), JSIConverter<std::vector<margelo::nitro::nitrofetch::NitroHeader>>::toJSI(runtime, arg.headers));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "bodyString"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.bodyString));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "bodyBytes"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.bodyBytes));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "bodyBytes"), JSIConverter<std::optional<std::shared_ptr<ArrayBuffer>>>::toJSI(runtime, arg.bodyBytes));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -107,7 +108,7 @@ namespace margelo::nitro {
       if (!JSIConverter<bool>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "redirected")))) return false;
       if (!JSIConverter<std::vector<margelo::nitro::nitrofetch::NitroHeader>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "headers")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyString")))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyBytes")))) return false;
+      if (!JSIConverter<std::optional<std::shared_ptr<ArrayBuffer>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "bodyBytes")))) return false;
       return true;
     }
   };

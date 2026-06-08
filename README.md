@@ -134,8 +134,46 @@ registerTokenRefresh({
 - Default `responseType` is `'json'`. Use **`mappings`** to copy fields from the JSON body into header names (dot paths supported, e.g. `data.token`).
 - Use **`compositeHeaders`** to build a header from a template and multiple JSON paths (`{{placeholder}}` in the template).
 - For a plain-text body, set `responseType: 'text'` and use **`textHeader`** / optional **`textTemplate`** (with `{{value}}`).
+- To inject into the prefetch's **JSON body** or **form-data** (the `fetch` path only), use **`bodyMappings`** / **`formDataMappings`** (see below).
 
+**Example: header + JSON body + form-data mappings**
 
+One config can fan the same refreshed value into all three destinations. Each mapping only applies to a prefetch whose body it matches — `bodyMappings` won't synthesize a JSON body on a GET/form request, and `formDataMappings` won't make a request multipart.
+
+```ts
+import { registerTokenRefresh } from 'react-native-nitro-fetch'
+
+// Refresh endpoint returns e.g. { "data": { "accessToken": "abc123" } }
+registerTokenRefresh({
+  target: 'fetch',
+  url: 'https://api.example.com/oauth/token',
+  method: 'POST',
+  responseType: 'json',
+
+  // 1) header mapping → sets a request header
+  mappings: [
+    { jsonPath: 'data.accessToken', header: 'Authorization', valueTemplate: 'Bearer {{value}}' },
+  ],
+
+  // 2) JSON-body mapping → sets a (nested) dot-path key in the prefetch's JSON body
+  bodyMappings: [
+    { jsonPath: 'data.accessToken', bodyPath: 'auth.token' },
+  ],
+
+  // 3) form-data mapping → replaces/appends a multipart field by name
+  formDataMappings: [
+    { jsonPath: 'data.accessToken', field: 'token' },
+  ],
+
+  onFailure: 'useStoredHeaders',
+})
+```
+
+Result, per prefetch:
+- a JSON prefetch of `{ "deviceId": "d-1" }` → `Authorization: Bearer abc123` **and** body `{ "deviceId": "d-1", "auth": { "token": "abc123" } }`
+- a form-data prefetch → `Authorization: Bearer abc123` **and** a `token=abc123` part
+
+> For `responseType: 'text'`, the body/form equivalents of `textHeader` are **`bodyTextPath`** / **`formDataTextField`**.
 
 **Example: token refresh + WebSocket prewarm**
 
@@ -333,17 +371,7 @@ More detail: **[docs/websockets.md](docs/websockets.md)** · UI sample: **[examp
 - **WebSockets** are not part of `react-native-nitro-fetch` itself; use the companion package **[react-native-nitro-websockets](docs/websockets.md)** (with **react-native-nitro-text-decoder**). For other stacks, [react-native-fast-io](https://github.com/callstackincubator/react-native-fast-io) is another option.
 
 ## Documentation
-
-- [Getting Started](docs/getting-started.md)
-- [API Reference](docs/api.md)
-- [Android Details](docs/android.md)
-- [iOS Details](docs/ios.md)
-- [Prefetch & Auto-Prefetch](docs/prefetch.md)
-- [WebSockets & prewarm](docs/websockets.md)
-- [Worklets](docs/worklets.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Cronet (Android) notes](docs/cronet-android.md)
-- [Cronet (iOS) notes](docs/cronet-ios.md)
+You can find documentation at https://fetch.margelo.com
 
 ## Margelo
 

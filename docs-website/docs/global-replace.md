@@ -46,45 +46,31 @@ const socket = io('https://example.com', {
   WebSocket: NitroWebSocket,
 });
 ```
+
 :::
 
 ## Axios
 
-If you use [axios](https://axios-http.com), you can route all requests through Nitro via a custom adapter:
+If you use [axios](https://axios-http.com), prefer axios's built-in fetch adapter and pass Nitro's `fetch` explicitly. This keeps the integration at the axios instance boundary instead of relying on global replacement.
+
+:::tip
+Custom `env.fetch` support requires axios `v1.12.0` or newer.
+
+Setting `Request` and `Response` to `null` is the recommended configuration: it tells axios to hand the request straight to Nitro's native client instead of wrapping it in its own JS `Request`/`Response`. Nitro performs the transfer natively, so the only trade-off is that axios's JS-level upload/download progress callbacks — which it builds on those constructors — won't fire. If you leave them unset, axios falls back to the global `Request`/`Response`, which aren't a 1:1 match for Nitro's native objects.
+
+See the [axios fetch adapter docs](https://axios.rest/pages/advanced/fetch-adapter.html) for more info.
+:::
 
 ```ts
-import axios, { AxiosAdapter, AxiosHeaders } from 'axios';
-import { fetch } from 'react-native-nitro-fetch';
+import axios from 'axios';
+import { fetch as nitroFetch } from 'react-native-nitro-fetch';
 
-const nitroAxiosAdapter: AxiosAdapter = async (config) => {
-  const url = buildURL(config);
-  const res = await fetch(url, {
-    method: (config.method ?? 'get').toUpperCase(),
-    headers: AxiosHeaders.from(config.headers as any).toJSON() as Record<string, string>,
-    body: config.data,
-    signal: config.signal,
-  });
-
-  const headers = new AxiosHeaders();
-  res.headers.forEach((v, k) => headers.set(k, v));
-  const data = config.responseType === 'arraybuffer' ? await res.arrayBuffer()
-    : config.responseType === 'blob' ? await res.blob()
-    : config.responseType === 'text' ? await res.text()
-    : await res.json().catch(() => null);
-
-  return { data, status: res.status, statusText: res.statusText, headers, config, request: null };
-};
-
-function buildURL(config: any): string {
-  let url = config.url ?? '';
-  if (config.baseURL && !/^https?:\/\//i.test(url))
-    url = config.baseURL.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '');
-  if (config.params) {
-    const qs = new URLSearchParams(config.params).toString();
-    if (qs) url += (url.includes('?') ? '&' : '?') + qs;
-  }
-  return url;
-}
-
-export const api = axios.create({ adapter: nitroAxiosAdapter });
+export const api = axios.create({
+  adapter: 'fetch',
+  env: {
+    fetch: nitroFetch,
+    Request: null!,
+    Response: null!,
+  },
+});
 ```

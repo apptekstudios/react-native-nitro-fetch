@@ -28,10 +28,15 @@ class MainApplication : Application(), ReactApplication {
     // Native-side prefetch registration — fires on the very first cold launch.
     try {
       AutoPrefetcher.registerPrefetch(
-        this,
-        "https://httpbin.org/anything/native-prefetch-test",
-        "harness-native-prefetch",
-        mapOf("Accept" to "application/json")
+        context = this,
+        // Local httpbin-compatible Express server (test-server/) started by CI on
+        // the host; the Android emulator reaches it via 10.0.2.2. Must match
+        // NP_URL in the harness so the first JS fetch lands a cache hit.
+        url = "http://10.0.2.2:9876/anything/native-prefetch-test",
+        prefetchKey = "harness-native-prefetch",
+        headers = mapOf("Accept" to "application/json"),
+        // Long TTL so the harness can hit the cache long after launch.
+        prefetchCacheTtlMs = 300_000.0
       )
     } catch (_: Throwable) {}
     // Best-effort auto prefetch when engine initializes (app start)

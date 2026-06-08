@@ -66,6 +66,34 @@ export function BasicFetchScreen() {
         }
       },
     },
+    {
+      title: 'GET Binary (arrayBuffer)',
+      action: async () => {
+        addLog('GET https://httpbin.org/image/png...');
+        try {
+          const res = await nitroFetch('https://httpbin.org/image/png');
+          const buf = await res.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          // PNG files always start with the 8-byte signature 89 50 4E 47 0D 0A 1A 0A
+          const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+          const valid = bytes.length > 8 && sig.every((b, i) => bytes[i] === b);
+          if (valid) {
+            addLog(
+              `✅ Binary intact! ${bytes.length} bytes, valid PNG signature\n` +
+                `First bytes: ${Array.from(bytes.slice(0, 8))
+                  .map((b) => b.toString(16).padStart(2, '0'))
+                  .join(' ')}`
+            );
+          } else {
+            addLog(
+              `❌ Binary corrupted/empty! ${bytes.length} bytes, bad signature`
+            );
+          }
+        } catch (e: any) {
+          addLog(`❌ Failed: ${e.message}`);
+        }
+      },
+    },
   ];
 
   return (

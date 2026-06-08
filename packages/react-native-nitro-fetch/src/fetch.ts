@@ -167,7 +167,11 @@ function ensureClient() {
 
 function buildNitroRequest(
   input: RequestInfo | URL,
-  init?: RequestInit & { redirect?: RequestRedirect; cache?: RequestCache }
+  init?: RequestInit & {
+    redirect?: RequestRedirect;
+    cache?: RequestCache;
+    prefetchCacheTtlMs?: number;
+  }
 ): NitroRequestNative {
   'worklet';
   let url: string;
@@ -216,6 +220,11 @@ function buildNitroRequest(
   // Determine followRedirects based on redirect option
   const followRedirects = redirectOption === 'follow';
 
+  const prefetchCacheTtlMs =
+    typeof init?.prefetchCacheTtlMs === 'number'
+      ? init.prefetchCacheTtlMs
+      : undefined;
+
   return {
     url,
     method: (method?.toUpperCase() as any) ?? 'GET',
@@ -224,6 +233,7 @@ function buildNitroRequest(
     bodyBytes: undefined as any,
     bodyFormData: normalized?.bodyFormData,
     followRedirects,
+    prefetchCacheTtlMs,
   };
 }
 
@@ -324,7 +334,7 @@ function normalizeBodyPure(
 // Pure JS version of buildNitroRequest that doesnt use anything that breaks worklets
 export function buildNitroRequestPure(
   input: RequestInfo | URL,
-  init?: RequestInit
+  init?: RequestInit & { prefetchCacheTtlMs?: number }
 ): NitroRequestNative {
   'worklet';
   let url: string;
@@ -356,6 +366,11 @@ export function buildNitroRequestPure(
   const headers = headersToPairsPure(headersInit);
   const normalized = normalizeBodyPure(body);
 
+  const prefetchCacheTtlMs =
+    typeof init?.prefetchCacheTtlMs === 'number'
+      ? init.prefetchCacheTtlMs
+      : undefined;
+
   return {
     url,
     method: (method?.toUpperCase() as any) ?? 'GET',
@@ -364,6 +379,7 @@ export function buildNitroRequestPure(
     // Only include bodyBytes when provided to avoid signaling upload data unintentionally
     bodyBytes: undefined as any,
     followRedirects: true,
+    prefetchCacheTtlMs,
   };
 }
 
@@ -727,7 +743,7 @@ export async function nitroFetch(
     ok: res.ok,
     redirected: res.redirected,
     headers: res.headers,
-    bodyBytes: res.bodyBytes as unknown as ArrayBuffer | undefined,
+    bodyBytes: res.bodyBytes,
     bodyString: res.bodyString,
   });
   return response as unknown as Response;
@@ -767,6 +783,8 @@ export async function prefetch(
   await client.prefetch(req);
 }
 
+const AUTOPREFETCH_QUEUE_KEY = 'nitrofetch_autoprefetch_queue';
+
 // Persist a request to storage so native can prefetch it on app start.
 export async function prefetchOnAppStart(
   input: RequestInfo | URL,
@@ -794,20 +812,27 @@ export async function prefetchOnAppStart(
     {} as Record<string, string>
   );
 
-  const entry = {
+  const entry: Record<string, any> = {
     url: req.url,
     prefetchKey,
     headers: headersObj,
-  } as const;
+  };
+  if (req.method && req.method !== 'GET') entry.method = req.method;
+  if (req.bodyString !== undefined) entry.bodyString = req.bodyString;
+  if (typeof req.bodyBytes === 'string' && req.bodyBytes.length > 0)
+    entry.bodyBytes = req.bodyBytes;
+  if (req.bodyFormData && req.bodyFormData.length > 0)
+    entry.bodyFormData = req.bodyFormData;
+  if (typeof req.timeoutMs === 'number') entry.timeoutMs = req.timeoutMs;
+  if (req.followRedirects === false) entry.followRedirects = false;
+  if (typeof req.prefetchCacheTtlMs === 'number')
+    entry.prefetchCacheTtlMs = req.prefetchCacheTtlMs;
 
   // Write or append to storage queue
   try {
-    const KEY = 'nitrofetch_autoprefetch_queue';
     let arr: any[] = [];
     try {
-      const raw = NativeStorageSingleton.getString(
-        'nitrofetch_autoprefetch_queue'
-      );
+      const raw = NativeStorageSingleton.getString(AUTOPREFETCH_QUEUE_KEY);
       if (raw) arr = JSON.parse(raw);
       if (!Array.isArray(arr)) arr = [];
     } catch {
@@ -817,7 +842,10 @@ export async function prefetchOnAppStart(
       arr = arr.filter((e) => e && e.prefetchKey !== prefetchKey);
     }
     arr.push(entry);
-    NativeStorageSingleton.setString(KEY, JSON.stringify(arr));
+    NativeStorageSingleton.setString(
+      AUTOPREFETCH_QUEUE_KEY,
+      JSON.stringify(arr)
+    );
   } catch (e) {
     console.warn('Failed to persist prefetch queue', e);
   }
@@ -828,12 +856,9 @@ export async function removeFromAutoPrefetch(
   prefetchKey: string
 ): Promise<void> {
   try {
-    const KEY = 'nitrofetch_autoprefetch_queue';
     let arr: any[] = [];
     try {
-      const raw = NativeStorageSingleton.getString(
-        'nitrofetch_autoprefetch_queue'
-      );
+      const raw = NativeStorageSingleton.getString(AUTOPREFETCH_QUEUE_KEY);
       if (raw) arr = JSON.parse(raw);
       if (!Array.isArray(arr)) arr = [];
     } catch {
@@ -841,9 +866,12 @@ export async function removeFromAutoPrefetch(
     }
     const next = arr.filter((e) => e && e.prefetchKey !== prefetchKey);
     if (next.length === 0) {
-      NativeStorageSingleton.removeString(KEY);
+      NativeStorageSingleton.removeString(AUTOPREFETCH_QUEUE_KEY);
     } else if (next.length !== arr.length) {
-      NativeStorageSingleton.setString(KEY, JSON.stringify(next));
+      NativeStorageSingleton.setString(
+        AUTOPREFETCH_QUEUE_KEY,
+        JSON.stringify(next)
+      );
     }
   } catch (e) {
     console.warn('Failed to remove from prefetch queue', e);
@@ -852,8 +880,18 @@ export async function removeFromAutoPrefetch(
 
 // Remove all entries from the auto-prefetch queue.
 export async function removeAllFromAutoprefetch(): Promise<void> {
-  const KEY = 'nitrofetch_autoprefetch_queue';
-  NativeStorageSingleton.setString(KEY, JSON.stringify([]));
+  NativeStorageSingleton.setString(AUTOPREFETCH_QUEUE_KEY, JSON.stringify([]));
+}
+
+export function __readAutoPrefetchQueue(): Array<Record<string, any>> {
+  try {
+    const raw = NativeStorageSingleton.getString(AUTOPREFETCH_QUEUE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 // Optional off-thread processing using react-native-worklets

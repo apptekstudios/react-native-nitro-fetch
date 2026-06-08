@@ -9,7 +9,7 @@ package com.margelo.nitro.nitrofetch
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-
+import com.margelo.nitro.core.ArrayBuffer
 
 /**
  * Represents the JavaScript object/struct "NitroResponse".
@@ -40,7 +40,7 @@ data class NitroResponse(
   val bodyString: String?,
   @DoNotStrip
   @Keep
-  val bodyBytes: String?
+  val bodyBytes: ArrayBuffer?
 ) {
   /* primary constructor */
 
@@ -52,7 +52,7 @@ data class NitroResponse(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String, status: Double, statusText: String, ok: Boolean, redirected: Boolean, headers: Array<NitroHeader>, bodyString: String?, bodyBytes: String?): NitroResponse {
+    private fun fromCpp(url: String, status: Double, statusText: String, ok: Boolean, redirected: Boolean, headers: Array<NitroHeader>, bodyString: String?, bodyBytes: ArrayBuffer?): NitroResponse {
       return NitroResponse(url, status, statusText, ok, redirected, headers, bodyString, bodyBytes)
     }
   }

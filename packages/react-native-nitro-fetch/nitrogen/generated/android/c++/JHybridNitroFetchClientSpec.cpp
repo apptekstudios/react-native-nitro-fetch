@@ -27,6 +27,8 @@ namespace margelo::nitro::nitrofetch { struct NitroFormDataPart; }
 #include <vector>
 #include "JNitroHeader.hpp"
 #include <optional>
+#include <NitroModules/ArrayBuffer.hpp>
+#include <NitroModules/JArrayBuffer.hpp>
 #include <NitroModules/JUnit.hpp>
 #include "NitroRequest.hpp"
 #include "JNitroRequest.hpp"

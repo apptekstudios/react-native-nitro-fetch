@@ -144,7 +144,8 @@ export class NitroResponse {
   }
 
   private _getBodyBytes(): ArrayBuffer | undefined {
-    if (this._bodyBytes) return this._bodyBytes;
+    // TODO: copy buffer to avoid clone being modifying res
+    if (this._bodyBytes != null) return this._bodyBytes;
     if (this._bodyString != null) {
       const encoded = stringToUTF8(this._bodyString);
       return (encoded.buffer as ArrayBuffer).slice(
